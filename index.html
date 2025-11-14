@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>DriveScan — Image to PDF (PWA)</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="style.css" />
+  <!-- Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+</head>
+<body>
+  <div id="app">
+    <!-- Sidebar -->
+    <aside id="sidebar">
+      <div class="brand">
+        <img src="icons/icon-192.svg" alt="logo" />
+        <div>
+          <strong>DriveScan</strong>
+          <div class="muted">Scanner & PDF Drive</div>
+        </div>
+      </div>
+
+      <nav>
+        <button class="nav-btn active" data-route="home">Home</button>
+        <button class="nav-btn" data-route="scan">Scan</button>
+        <button class="nav-btn" data-route="editor">Editor</button>
+        <button class="nav-btn" data-route="drive">My PDFs</button>
+        <button class="nav-btn" data-route="settings">Settings</button>
+        <button class="nav-btn" data-route="privacy">Privacy</button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <small class="muted">Theme</small>
+        <div class="toggle-row">
+          <button id="themeToggle" class="chip">Dark</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main id="main">
+      <header class="topbar">
+        <div class="search-row">
+          <input id="searchInput" placeholder="Search PDFs..." />
+        </div>
+        <div class="top-actions">
+          <button id="openDriveBtn" class="btn ghost">My PDFs</button>
+          <button id="profileBtn" class="btn">Sign in</button>
+        </div>
+      </header>
+
+      <!-- Views -->
+      <section id="view-home" class="view active">
+        <div class="hero card">
+          <h2>Scan & Create PDFs — Fast</h2>
+          <p class="muted">Tap + to scan or upload photos. Edit, crop, apply filters, reorder pages, and export multi-page PDFs.</p>
+
+          <div class="quick-actions">
+            <button id="fabScan" class="btn primary">Scan (camera)</button>
+            <button id="fabUpload" class="btn">Upload</button>
+            <input id="picker" type="file" accept="image/*" multiple style="display:none" />
+          </div>
+        </div>
+
+        <div class="card" id="selected-container">
+          <h3>Selected Images</h3>
+          <div id="selectedRow" class="thumb-grid">
+            <!-- thumbnails inserted here -->
+          </div>
+          <div class="row" style="margin-top:12px;">
+            <input id="pdfName" placeholder="PDF name (optional)" />
+            <button id="createPdfBtn" class="btn primary">Create PDF</button>
+            <button id="clearSelected" class="btn ghost">Clear</button>
+          </div>
+        </div>
+      </section>
+      
+      <section id="view-scan" class="view">
+        <div class="card">
+          <h3>Scan — Camera</h3>
+          <div id="cameraArea">
+            <video id="video" playsinline autoplay></video>
+            <canvas id="captureCanvas" style="display:none"></canvas>
+            <div class="cam-controls">
+              <button id="camFlip" class="btn ghost">Flip</button>
+              <button id="camCapture" class="btn primary">Capture</button>
+              <button id="camClose" class="btn ghost">Close</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-editor" class="view">
+        <div class="card">
+          <h3>Editor</h3>
+          <div class="editor-area">
+            <div class="left">
+              <div id="editorWrap" class="editorCanvasWrap">
+                <canvas id="editorCanvas"></canvas>
+              </div>
+              <div class="editor-controls">
+                <button id="rotateBtn" class="btn ghost">Rotate</button>
+                <button id="cropToggleBtn" class="btn ghost">Crop</button>
+                <label>Filter:
+                  <select id="filterSelect">
+                    <option value="none">None</option>
+                    <option value="grayscale(1)">Grayscale</option>
+                    <option value="sepia(1)">Sepia</option>
+                    <option value="invert(1)">Invert</option>
+                  </select>
+                </label>
+                <label>Brightness <input id="bright" type="range" min="0.6" max="1.6" step="0.05" value="1"></label>
+                <label>Contrast <input id="contrast" type="range" min="0.6" max="1.6" step="0.05" value="1"></label>
+              </div>
+            </div>
+
+            <div class="right">
+              <h4>Pages / Thumbnails</h4>
+              <div id="editorThumbs" class="thumb-grid"></div>
+              <div class="row">
+                <button id="applyEdit" class="btn primary">Apply & Save</button>
+                <button id="discardEdit" class="btn ghost">Discard</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-drive" class="view">
+        <div class="card">
+          <h3>My PDFs</h3>
+          <div id="driveList"></div>
+        </div>
+      </section>
+
+      <section id="view-settings" class="view">
+        <div class="card">
+          <h3>Settings</h3>
+          <div class="muted">App settings and preferences.</div>
+          <div class="settings-grid">
+            <label>
+              <div>Auto-save to cloud (disabled)</div>
+              <div><input type="checkbox" id="autoCloud" disabled /></div>
+            </label>
+            <label>
+              <div>Storage info</div>
+              <div id="storageInfo" class="muted">—</div>
+            </label>
+            <label>
+              <div>Clear all saved PDFs</div>
+              <div><button id="clearStorage" class="btn ghost">Clear</button></div>
+            </label>
+        </div>
+        </div>
+      </section>
+
+      <section id="view-privacy" class="view">
+        <div class="card">
+          <h3>Privacy & Terms</h3>
+          <p class="muted">This app runs locally in your browser. No files are uploaded without explicit action. See full policy below.</p>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- floating -->
+  <div id="fab" class="fab">
+    <button id="fabBtn" class="fab-btn">＋</button>
+    <div id="fabMenu" class="fab-menu hidden">
+      <button id="menuScan" class="menu-item">Scan</button>
+      <button id="menuUpload" class="menu-item">Upload</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
